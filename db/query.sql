@@ -20,3 +20,8 @@ UPDATE user SET
     updated_at = CURRENT_TIMESTAMP
 WHERE id = sqlc.arg('id')
 RETURNING username, email, bio, image;
+
+-- name: GetFollowingCount :one
+SELECT COUNT(*) FROM following
+WHERE user_id = ?
+AND follower_id = ?;

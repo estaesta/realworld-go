@@ -35,6 +35,24 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const getFollowingCount = `-- name: GetFollowingCount :one
+SELECT COUNT(*) FROM following
+WHERE user_id = ?
+AND follower_id = ?
+`
+
+type GetFollowingCountParams struct {
+	UserID     int64
+	FollowerID int64
+}
+
+func (q *Queries) GetFollowingCount(ctx context.Context, arg GetFollowingCountParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getFollowingCount, arg.UserID, arg.FollowerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, username, email, password, bio, image, created_at, updated_at FROM user WHERE email = ? LIMIT 1
 `

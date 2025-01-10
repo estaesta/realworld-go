@@ -61,6 +61,7 @@ func (app *application) loadRoutes() {
 		})
 
 		r.Route("/profiles", func(r chi.Router) {
+			r.Use(custommiddleware.Verifier(app.token))
 			r.Get("/{username}", handler.GetProfile)
 		})
 	})
