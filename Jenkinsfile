@@ -2,9 +2,10 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE_NAME = 'realworld-go:latest'
+        DOCKER_IMAGE_NAME = 'realworld-go'
         DOCKER_CONTAINER_NAME = 'realworld-go'
         PORT = 8080
+        DB_PATH = credentials('DB_PATH')
     }
     stages {
         stage('Scan') {
@@ -15,7 +16,11 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE_NAME .'
+                sh '''
+                    docker build -t $DOCKER_IMAGE_NAME .
+                    docker tag $DOCKER_IMAGE_NAME $DOCKER_IMAGE_NAME:latest
+                    docker tag $DOCKER_IMAGE_NAME $DOCKER_IMAGE_NAME:$GIT_COMMIT
+                    '''
             }
         }
 
@@ -28,9 +33,8 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
-                    docker stop $DOCKER_CONTAINER_NAME || true
-                    docker rm $DOCKER_CONTAINER_NAME || true
-                    docker run -d -p $PORT:8080 --name $DOCKER_CONTAINER_NAME $DOCKER_IMAGE_NAME
+                    docker compose down || true
+                    docker compose up -d
                 '''
             }
         }

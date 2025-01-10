@@ -1,0 +1,10 @@
+version: '3'
+services:
+  realworld-go:
+    image: ${DOCKER_IMAGE_NAME}:latest
+    container_name: ${DOCKER_CONTAINER_NAME}
+    ports:
+      - "${PORT}:8080"
+    volumes:
+      - ${DB_PATH}:/db
+    restart: always
