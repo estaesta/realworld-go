@@ -8,3 +8,5 @@ services:
     volumes:
       - ${DB_PATH}:/db
     restart: always
+    environment:
+      - JWT_SECRET=${JWT_SECRET}

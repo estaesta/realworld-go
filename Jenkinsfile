@@ -6,6 +6,7 @@ pipeline {
         DOCKER_CONTAINER_NAME = 'realworld-go'
         PORT = 8080
         DB_PATH = credentials('DB_PATH')
+        JWT_SECRET = credentials('JWT_SECRET')
     }
     stages {
         stage('Scan') {
