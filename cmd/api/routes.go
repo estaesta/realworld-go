@@ -60,6 +60,7 @@ func (app *application) loadRoutes() {
 			r.Get("/user", handler.GetUser)
 			r.Put("/user", handler.UpdateUser)
 			r.Post("/profiles/{username}/follow", handler.Follow)
+			r.Delete("/profiles/{username}/follow", handler.Unfollow)
 		})
 
 		r.Route("/profiles", func(r chi.Router) {

@@ -130,6 +130,22 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 	return i, err
 }
 
+const unfollowByUserIDAndFollowerID = `-- name: UnfollowByUserIDAndFollowerID :exec
+DELETE FROM following
+WHERE user_id = ?1
+AND follower_id = ?2
+`
+
+type UnfollowByUserIDAndFollowerIDParams struct {
+	UserID     int64
+	FollowerID int64
+}
+
+func (q *Queries) UnfollowByUserIDAndFollowerID(ctx context.Context, arg UnfollowByUserIDAndFollowerIDParams) error {
+	_, err := q.db.ExecContext(ctx, unfollowByUserIDAndFollowerID, arg.UserID, arg.FollowerID)
+	return err
+}
+
 const updateUserByID = `-- name: UpdateUserByID :one
 UPDATE user SET
     email = COALESCE(?1, email),

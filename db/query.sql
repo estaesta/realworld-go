@@ -31,3 +31,8 @@ INSERT INTO following (user_id, follower_id)
 SELECT u.id, ?
 FROM user u
 WHERE u.username = sqlc.arg('username');
+
+-- name: UnfollowByUserIDAndFollowerID :exec
+DELETE FROM following
+WHERE user_id = sqlc.arg('user_id')
+AND follower_id = sqlc.arg('follower_id');
