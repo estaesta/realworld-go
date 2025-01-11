@@ -25,3 +25,9 @@ RETURNING username, email, bio, image;
 SELECT COUNT(*) FROM following
 WHERE user_id = ?
 AND follower_id = ?;
+
+-- name: FollowByUserUsernameAndFollowerID :exec
+INSERT INTO following (user_id, follower_id)
+SELECT u.id, ?
+FROM user u
+WHERE u.username = sqlc.arg('username');

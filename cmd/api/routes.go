@@ -27,6 +27,7 @@ func (app *application) loadRoutes() {
 		InfoLog:  infoLog,
 		Token:    tokenAuth,
 		Queries:  queries,
+		DB:       app.DB,
 	}
 
 	r := chi.NewRouter()
@@ -58,6 +59,7 @@ func (app *application) loadRoutes() {
 			// })
 			r.Get("/user", handler.GetUser)
 			r.Put("/user", handler.UpdateUser)
+			r.Post("/profiles/{username}/follow", handler.Follow)
 		})
 
 		r.Route("/profiles", func(r chi.Router) {

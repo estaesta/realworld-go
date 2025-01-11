@@ -35,6 +35,23 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const followByUserUsernameAndFollowerID = `-- name: FollowByUserUsernameAndFollowerID :exec
+INSERT INTO following (user_id, follower_id)
+SELECT u.id, ?
+FROM user u
+WHERE u.username = ?2
+`
+
+type FollowByUserUsernameAndFollowerIDParams struct {
+	FollowerID int64
+	Username   string
+}
+
+func (q *Queries) FollowByUserUsernameAndFollowerID(ctx context.Context, arg FollowByUserUsernameAndFollowerIDParams) error {
+	_, err := q.db.ExecContext(ctx, followByUserUsernameAndFollowerID, arg.FollowerID, arg.Username)
+	return err
+}
+
 const getFollowingCount = `-- name: GetFollowingCount :one
 SELECT COUNT(*) FROM following
 WHERE user_id = ?

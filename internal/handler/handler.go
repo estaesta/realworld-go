@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"log"
 
 	"github.com/estaesta/realworld-go/internal/model"
@@ -12,6 +13,7 @@ type Handler struct {
 	InfoLog  *log.Logger
 	Token    *jwtauth.JWTAuth
 	Queries  *model.Queries
+	DB       *sql.DB
 }
 
 // func New(m *model.Model) *Handler {
