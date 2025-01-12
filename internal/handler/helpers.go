@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime/debug"
+
+	"github.com/mattn/go-sqlite3"
 )
 
 // The serverError helper writes an error message and stack trace to the errorLog,
@@ -31,4 +34,18 @@ func (h *Handler) clientError(w http.ResponseWriter, status int) {
 // the user.
 func (h *Handler) notFound(w http.ResponseWriter) {
 	h.clientError(w, http.StatusNotFound)
+}
+
+// ConstraintCheck is a helper function to check if the error is a constraint error
+func (h *Handler) ConstraintCheck(err error, w http.ResponseWriter) {
+	var sqliteErr sqlite3.Error
+	if errors.As(err, &sqliteErr) {
+		if sqliteErr.Code == sqlite3.ErrNo(sqlite3.ErrConstraint) {
+			h.clientError(w, http.StatusBadRequest)
+			return
+		}
+		h.InfoLog.Println("Database error: ", err)
+		h.serverError(w, err)
+		return
+	}
 }

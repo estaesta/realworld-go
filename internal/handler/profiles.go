@@ -3,13 +3,11 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/estaesta/realworld-go/internal/model"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/mattn/go-sqlite3"
 )
 
 func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
@@ -17,7 +15,7 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	user, err := h.Queries.GetUserByUsername(r.Context(), username)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			h.clientError(w, http.StatusNotFound)
+			h.notFound(w)
 			return
 		}
 		h.serverError(w, err)
@@ -79,7 +77,7 @@ func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 	user, err := qtx.GetUserByUsername(r.Context(), username)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			h.clientError(w, http.StatusNotFound)
+			h.notFound(w)
 			return
 		}
 		h.serverError(w, err)
@@ -89,15 +87,8 @@ func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 		FollowerID: currentUserId,
 		Username:   username,
 	})
-	var sqlite *sqlite3.Error
-	if errors.As(err, &sqlite) {
-		if sqlite.Code == sqlite3.ErrConstraint {
-			h.clientError(w, http.StatusBadRequest)
-			return
-		}
-		h.serverError(w, err)
-		return
-	}
+	h.ConstraintCheck(err, w)
+
 	err = tx.Commit()
 	if err != nil {
 		h.serverError(w, err)
@@ -143,7 +134,7 @@ func (h *Handler) Unfollow(w http.ResponseWriter, r *http.Request) {
 	user, err := qtx.GetUserByUsername(r.Context(), username)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			h.clientError(w, http.StatusNotFound)
+			h.notFound(w)
 			return
 		}
 		h.serverError(w, err)

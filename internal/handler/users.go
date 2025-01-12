@@ -3,11 +3,9 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/estaesta/realworld-go/internal/model"
-	"github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -54,16 +52,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// check if error unique constraint
-	var sqliteErr sqlite3.Error
-	if errors.As(err, &sqliteErr) {
-		if sqliteErr.Code == sqlite3.ErrNo(sqlite3.ErrConstraint) {
-			h.clientError(w, http.StatusBadRequest)
-			return
-		}
-		h.InfoLog.Println("Database error: ", err)
-		h.serverError(w, err)
-		return
-	}
+	h.ConstraintCheck(err, w)
 
 	w.Header().Set("Content-Type", "application/json")
 	res := map[string]interface{}{
