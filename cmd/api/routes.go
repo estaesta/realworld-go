@@ -41,32 +41,37 @@ func (app *application) loadRoutes() {
 	})
 
 	r.Route("/api", func(r chi.Router) {
-		// r.Use(middleware.RequestID)
 
 		r.Route("/users", func(r chi.Router) {
 			r.Post("/", handler.Register)
 			r.Post("/login", handler.Login)
 		})
 
+		// Auth required
 		r.Group(func(r chi.Router) {
 			// Seek, verify and validate JWT tokens
 			r.Use(custommiddleware.Verifier(app.token))
 			r.Use(jwtauth.Authenticator(app.token))
 
-			// r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
-			// 	_, claims, _ := jwtauth.FromContext(r.Context())
-			// 	w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["user_id"])))
-			// })
 			r.Get("/user", handler.GetUser)
 			r.Put("/user", handler.UpdateUser)
+
 			r.Post("/profiles/{username}/follow", handler.Follow)
 			r.Delete("/profiles/{username}/follow", handler.Unfollow)
+
+			r.Get("/articles/feed", handler.FeedArticles)
+			r.Post("/articles", handler.CreateArticle)
 		})
 
-		r.Route("/profiles", func(r chi.Router) {
+		// Auth optional
+		r.Group(func(r chi.Router) {
 			r.Use(custommiddleware.Verifier(app.token))
-			r.Get("/{username}", handler.GetProfile)
+
+			r.Get("/profiles/{username}", handler.GetProfile)
+			r.Get("/articles", handler.ListArticles)
+			r.Get("/articles/{slug}", handler.GetArticle)
 		})
+
 	})
 
 	app.router = r

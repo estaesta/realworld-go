@@ -36,3 +36,19 @@ WHERE u.username = sqlc.arg('username');
 DELETE FROM following
 WHERE user_id = sqlc.arg('user_id')
 AND follower_id = sqlc.arg('follower_id');
+
+-- name: CreateArticle :one
+INSERT INTO article (slug, title, description, body, author_id) 
+VALUES (?, ?, ?, ?, ?) 
+RETURNING id, created_at;
+
+-- name: CreateTag :one
+INSERT OR IGNORE INTO tag (name) VALUES (?)
+    RETURNING *;
+
+-- name: GetTags :many
+SELECT * FROM tag WHERE name IN(sqlc.slice('tags'));
+
+-- name: CreateArticleTag :exec
+INSERT OR IGNORE INTO article_tag (article_id, tag_id)
+SELECT ?, ?;

@@ -7,7 +7,73 @@ package model
 
 import (
 	"context"
+	"strings"
+	"time"
 )
+
+const createArticle = `-- name: CreateArticle :one
+INSERT INTO article (slug, title, description, body, author_id) 
+VALUES (?, ?, ?, ?, ?) 
+RETURNING id, created_at
+`
+
+type CreateArticleParams struct {
+	Slug        string
+	Title       string
+	Description string
+	Body        string
+	AuthorID    int64
+}
+
+type CreateArticleRow struct {
+	ID        int64
+	CreatedAt time.Time
+}
+
+func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (CreateArticleRow, error) {
+	row := q.db.QueryRowContext(ctx, createArticle,
+		arg.Slug,
+		arg.Title,
+		arg.Description,
+		arg.Body,
+		arg.AuthorID,
+	)
+	var i CreateArticleRow
+	err := row.Scan(&i.ID, &i.CreatedAt)
+	return i, err
+}
+
+const createArticleTag = `-- name: CreateArticleTag :exec
+INSERT OR IGNORE INTO article_tag (article_id, tag_id)
+SELECT ?, ?
+`
+
+type CreateArticleTagParams struct {
+	ArticleID int64
+	TagID     int64
+}
+
+func (q *Queries) CreateArticleTag(ctx context.Context, arg CreateArticleTagParams) error {
+	_, err := q.db.ExecContext(ctx, createArticleTag, arg.ArticleID, arg.TagID)
+	return err
+}
+
+const createTag = `-- name: CreateTag :one
+INSERT OR IGNORE INTO tag (name) VALUES (?)
+    RETURNING id, name, created_at, updated_at
+`
+
+func (q *Queries) CreateTag(ctx context.Context, name string) (Tag, error) {
+	row := q.db.QueryRowContext(ctx, createTag, name)
+	var i Tag
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO user (email, password, username) VALUES (?, ?, ?) RETURNING id, username, email, password, bio, image, created_at, updated_at
@@ -68,6 +134,48 @@ func (q *Queries) GetFollowingCount(ctx context.Context, arg GetFollowingCountPa
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const getTags = `-- name: GetTags :many
+SELECT id, name, created_at, updated_at FROM tag WHERE name IN(/*SLICE:tags*/?)
+`
+
+func (q *Queries) GetTags(ctx context.Context, tags []string) ([]Tag, error) {
+	query := getTags
+	var queryParams []interface{}
+	if len(tags) > 0 {
+		for _, v := range tags {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:tags*/?", strings.Repeat(",?", len(tags))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:tags*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Tag
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
