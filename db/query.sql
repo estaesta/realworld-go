@@ -21,7 +21,7 @@ UPDATE user SET
 WHERE id = sqlc.arg('id')
 RETURNING username, email, bio, image;
 
--- name: GetFollowingCount :one
+-- name: IsUserFollowByUserID :one
 SELECT COUNT(*) FROM following
 WHERE user_id = ?
 AND follower_id = ?;
@@ -52,3 +52,16 @@ SELECT * FROM tag WHERE name IN(sqlc.slice('tags'));
 -- name: CreateArticleTag :exec
 INSERT OR IGNORE INTO article_tag (article_id, tag_id)
 SELECT ?, ?;
+
+-- name: GetArticleBySlug :one
+SELECT sqlc.embed(article), sqlc.embed(user), GROUP_CONCAT(tag.name) AS tag
+FROM article 
+JOIN user ON article.author_id = user.id
+JOIN article_tag ON article.id = article_tag.article_id
+JOIN tag ON article_tag.tag_id = tag.id
+WHERE slug = ?;
+
+-- name: IsFavoriteByUserIDAndArticleID :one
+SELECT COUNT(*) FROM favorite
+WHERE user_id = ?
+AND article_id = ?;

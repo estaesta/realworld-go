@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/estaesta/realworld-go/internal/model"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
 )
 
@@ -23,7 +24,88 @@ func (h *Handler) FeedArticles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetArticle(w http.ResponseWriter, r *http.Request) {
+	slug := chi.URLParam(r, "slug")
 
+	tx, err := h.DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		h.serverError(w, err)
+		return
+	}
+	defer tx.Rollback()
+
+	qtx := h.Queries
+
+	article, err := qtx.GetArticleBySlug(r.Context(), slug)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			h.notFound(w)
+			return
+		}
+		h.serverError(w, err)
+		return
+	}
+
+	var isFollowing bool
+	var isFavorited bool
+	_, claims, _ := jwtauth.FromContext(r.Context())
+	user_id, ok := claims["user_id"].(float64)
+	if ok {
+		// check if user_id is following the author
+		following, err := h.Queries.IsUserFollowByUserID(r.Context(),
+			model.IsUserFollowByUserIDParams{
+				UserID:     article.Article.AuthorID,
+				FollowerID: int64(user_id),
+			})
+		if err != nil {
+			h.serverError(w, err)
+			return
+		}
+		isFollowing = following > 0
+		// check if user_id favorited the article
+		favorited, err := h.Queries.IsFavoriteByUserIDAndArticleID(r.Context(),
+			model.IsFavoriteByUserIDAndArticleIDParams{
+				UserID:    int64(user_id),
+				ArticleID: article.Article.ID,
+			})
+		if err != nil {
+			h.serverError(w, err)
+			return
+		}
+		isFavorited = favorited > 0
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		h.serverError(w, err)
+		return
+	}
+
+	res := map[string]interface{}{
+		"article": map[string]interface{}{
+			"slug":           article.Article.Slug,
+			"title":          article.Article.Title,
+			"description":    article.Article.Description,
+			"body":           article.Article.Body,
+			"tagList":        strings.Split(article.Tag, ","),
+			"createdAt":      article.Article.CreatedAt,
+			"updatedAt":      article.Article.CreatedAt,
+			"favorited":      isFavorited,
+			"favoritesCount": 0,
+			"author": map[string]interface{}{
+				"username":  article.User.Username,
+				"bio":       article.User.Bio,
+				"image":     article.User.Image,
+				"following": isFollowing,
+			},
+		},
+	}
+	resJson, err := json.Marshal(res)
+	if err != nil {
+		h.serverError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(resJson)
 }
 
 func (h *Handler) CreateArticle(w http.ResponseWriter, r *http.Request) {
@@ -136,7 +218,6 @@ func (h *Handler) CreateArticle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// commit
 	err = tx.Commit()
 	if err != nil {
 		h.serverError(w, err)

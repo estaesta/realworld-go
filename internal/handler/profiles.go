@@ -26,8 +26,8 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	_, claims, _ := jwtauth.FromContext(r.Context())
 	user_id, ok := claims["user_id"].(float64)
 	if ok {
-		following, err := h.Queries.GetFollowingCount(r.Context(),
-			model.GetFollowingCountParams{
+		following, err := h.Queries.IsUserFollowByUserID(r.Context(),
+			model.IsUserFollowByUserIDParams{
 				UserID:     user.ID,
 				FollowerID: int64(user_id),
 			})
@@ -83,10 +83,13 @@ func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 		h.serverError(w, err)
 		return
 	}
-	err = qtx.FollowByUserUsernameAndFollowerID(r.Context(), model.FollowByUserUsernameAndFollowerIDParams{
-		FollowerID: currentUserId,
-		Username:   username,
-	})
+	err = qtx.FollowByUserUsernameAndFollowerID(
+		r.Context(),
+		model.FollowByUserUsernameAndFollowerIDParams{
+			FollowerID: currentUserId,
+			Username:   username,
+		},
+	)
 	h.ConstraintCheck(err, w)
 
 	err = tx.Commit()

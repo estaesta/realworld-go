@@ -118,22 +118,44 @@ func (q *Queries) FollowByUserUsernameAndFollowerID(ctx context.Context, arg Fol
 	return err
 }
 
-const getFollowingCount = `-- name: GetFollowingCount :one
-SELECT COUNT(*) FROM following
-WHERE user_id = ?
-AND follower_id = ?
+const getArticleBySlug = `-- name: GetArticleBySlug :one
+SELECT article.id, article.slug, article.title, article.description, article.body, article.created_at, article.updated_at, article.author_id, user.id, user.username, user.email, user.password, user.bio, user.image, user.created_at, user.updated_at, GROUP_CONCAT(tag.name) AS tag
+FROM article 
+JOIN user ON article.author_id = user.id
+JOIN article_tag ON article.id = article_tag.article_id
+JOIN tag ON article_tag.tag_id = tag.id
+WHERE slug = ?
 `
 
-type GetFollowingCountParams struct {
-	UserID     int64
-	FollowerID int64
+type GetArticleBySlugRow struct {
+	Article Article
+	User    User
+	Tag     string
 }
 
-func (q *Queries) GetFollowingCount(ctx context.Context, arg GetFollowingCountParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getFollowingCount, arg.UserID, arg.FollowerID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+func (q *Queries) GetArticleBySlug(ctx context.Context, slug string) (GetArticleBySlugRow, error) {
+	row := q.db.QueryRowContext(ctx, getArticleBySlug, slug)
+	var i GetArticleBySlugRow
+	err := row.Scan(
+		&i.Article.ID,
+		&i.Article.Slug,
+		&i.Article.Title,
+		&i.Article.Description,
+		&i.Article.Body,
+		&i.Article.CreatedAt,
+		&i.Article.UpdatedAt,
+		&i.Article.AuthorID,
+		&i.User.ID,
+		&i.User.Username,
+		&i.User.Email,
+		&i.User.Password,
+		&i.User.Bio,
+		&i.User.Image,
+		&i.User.CreatedAt,
+		&i.User.UpdatedAt,
+		&i.Tag,
+	)
+	return i, err
 }
 
 const getTags = `-- name: GetTags :many
@@ -236,6 +258,42 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const isFavoriteByUserIDAndArticleID = `-- name: IsFavoriteByUserIDAndArticleID :one
+SELECT COUNT(*) FROM favorite
+WHERE user_id = ?
+AND article_id = ?
+`
+
+type IsFavoriteByUserIDAndArticleIDParams struct {
+	UserID    int64
+	ArticleID int64
+}
+
+func (q *Queries) IsFavoriteByUserIDAndArticleID(ctx context.Context, arg IsFavoriteByUserIDAndArticleIDParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, isFavoriteByUserIDAndArticleID, arg.UserID, arg.ArticleID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const isUserFollowByUserID = `-- name: IsUserFollowByUserID :one
+SELECT COUNT(*) FROM following
+WHERE user_id = ?
+AND follower_id = ?
+`
+
+type IsUserFollowByUserIDParams struct {
+	UserID     int64
+	FollowerID int64
+}
+
+func (q *Queries) IsUserFollowByUserID(ctx context.Context, arg IsUserFollowByUserIDParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, isUserFollowByUserID, arg.UserID, arg.FollowerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const unfollowByUserIDAndFollowerID = `-- name: UnfollowByUserIDAndFollowerID :exec

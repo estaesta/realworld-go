@@ -21,7 +21,11 @@ type application struct {
 var tokenAuth *jwtauth.JWTAuth
 
 func init() {
-	tokenAuth = jwtauth.New("HS256", []byte(os.Getenv("JWT_SECRET")), nil) // replace with secret key
+	tokenAuth = jwtauth.New(
+		"HS256",
+		[]byte(os.Getenv("JWT_SECRET")),
+		nil,
+	) // replace with secret key
 
 	// For debugging/example purposes, we generate and print
 	// a sample jwt token with claims `user_id:123` here:
