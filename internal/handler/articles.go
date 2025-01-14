@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,7 +17,97 @@ import (
 )
 
 func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
+	tag := r.URL.Query().Get("tag")
 
+	author := r.URL.Query().Get("author")
+
+	favorited := r.URL.Query().Get("favorited")
+
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "20"
+	}
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil {
+		h.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	offset := r.URL.Query().Get("offset")
+	if offset == "" {
+		offset = "0"
+	}
+	offsetInt, err := strconv.Atoi(offset)
+	if err != nil {
+		h.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	_, claims, _ := jwtauth.FromContext(r.Context())
+	user_id, ok := claims["user_id"].(float64)
+	var user_id_int64 int64
+	if ok {
+		user_id_int64 = int64(user_id)
+	} else {
+		user_id_int64 = 0
+	}
+
+	var favoritedParam int64
+	if favorited != "" {
+		favoritedUserID, err := h.Queries.GetUserByUsername(r.Context(), favorited)
+		if err != nil && err != sql.ErrNoRows {
+			h.serverError(w, err)
+			return
+		}
+		if err == sql.ErrNoRows {
+			favoritedParam = -1
+		}
+		if err == nil {
+			favoritedParam = favoritedUserID.ID
+		}
+	}
+
+	articles, err := h.Queries.GetArticlesList(r.Context(), model.GetArticlesListParams{
+		UserID:    user_id_int64,
+		Author:    author,
+		Tag:       tag,
+		Favorited: favoritedParam,
+		Limit:     int64(limitInt),
+		Offset:    int64(offsetInt),
+	})
+	if err != nil && err != sql.ErrNoRows {
+		h.serverError(w, err)
+		return
+	}
+
+	res := []map[string]interface{}{}
+	for _, v := range articles {
+		res = append(res, map[string]interface{}{
+			"article": map[string]interface{}{
+				"slug":           v.Slug,
+				"title":          v.Title,
+				"description":    v.Description,
+				"tagList":        strings.Split(v.Tags.(string), ","),
+				"createdAt":      v.CreatedAt,
+				"updatedAt":      v.CreatedAt,
+				"favorited":      v.Favorited > 0,
+				"favoritesCount": v.FavoritesCount,
+				"author": map[string]interface{}{
+					"username":  v.User.Username,
+					"bio":       v.User.Bio,
+					"image":     v.User.Image,
+					"following": false,
+				},
+			},
+		})
+	}
+	resJson, err := json.Marshal(res)
+	if err != nil {
+		h.serverError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(resJson)
 }
 
 func (h *Handler) FeedArticles(w http.ResponseWriter, r *http.Request) {

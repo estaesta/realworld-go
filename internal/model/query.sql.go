@@ -158,6 +158,105 @@ func (q *Queries) GetArticleBySlug(ctx context.Context, slug string) (GetArticle
 	return i, err
 }
 
+const getArticlesList = `-- name: GetArticlesList :many
+SELECT 
+    article.id,
+    article.slug,
+    article.title,
+    article.description,
+    IFNULL(GROUP_CONCAT(tag.name), '') AS tags,
+    CASE
+        WHEN article.id IN 
+        (SELECT article_id FROM favorite WHERE favorite.user_id = ?1) THEN 1
+        ELSE 0
+    END AS favorited,
+    (SELECT COUNT(*) FROM favorite
+    WHERE article_id = article.id) AS favorites_count,
+    article.created_at,
+    article.updated_at,
+    user.id, user.username, user.email, user.password, user.bio, user.image, user.created_at, user.updated_at
+FROM article
+LEFT JOIN user ON article.author_id = user.id
+LEFT JOIN article_tag ON article.id = article_tag.article_id
+LEFT JOIN tag ON article_tag.tag_id = tag.id
+LEFT JOIN favorite ON article.id = favorite.article_id
+WHERE (user.username = ?2 or ?2 = '')
+    AND (tag.name = ?3 or ?3 = '')
+    AND (favorite.user_id = ?4 or ?4 = 0)
+GROUP BY article.id
+LIMIT ?6 OFFSET ?5
+`
+
+type GetArticlesListParams struct {
+	UserID    int64
+	Author    string
+	Tag       string
+	Favorited int64
+	Offset    int64
+	Limit     int64
+}
+
+type GetArticlesListRow struct {
+	ID             int64
+	Slug           string
+	Title          string
+	Description    string
+	Tags           interface{}
+	Favorited      int64
+	FavoritesCount int64
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	User           User
+}
+
+func (q *Queries) GetArticlesList(ctx context.Context, arg GetArticlesListParams) ([]GetArticlesListRow, error) {
+	rows, err := q.db.QueryContext(ctx, getArticlesList,
+		arg.UserID,
+		arg.Author,
+		arg.Tag,
+		arg.Favorited,
+		arg.Offset,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetArticlesListRow
+	for rows.Next() {
+		var i GetArticlesListRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Title,
+			&i.Description,
+			&i.Tags,
+			&i.Favorited,
+			&i.FavoritesCount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.User.ID,
+			&i.User.Username,
+			&i.User.Email,
+			&i.User.Password,
+			&i.User.Bio,
+			&i.User.Image,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTags = `-- name: GetTags :many
 SELECT id, name, created_at, updated_at FROM tag WHERE name IN(/*SLICE:tags*/?)
 `
