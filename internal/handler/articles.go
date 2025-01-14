@@ -18,9 +18,7 @@ import (
 
 func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 	tag := r.URL.Query().Get("tag")
-
 	author := r.URL.Query().Get("author")
-
 	favorited := r.URL.Query().Get("favorited")
 
 	limit := r.URL.Query().Get("limit")
@@ -60,6 +58,7 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err == sql.ErrNoRows {
+			//if not found, set to -1 so that the query return empty
 			favoritedParam = -1
 		}
 		if err == nil {

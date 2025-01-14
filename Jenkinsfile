@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Scan') {
             steps {
-                sh "docker run -v $PWD:/myapp aquasec/trivy fs --format table -o trivy-fs-report.html /myapp"
+                sh "docker run -v $PWD:/myapp trivy fs --format table -o trivy-fs-report.html /myapp"
             }
         }
 
@@ -27,7 +27,7 @@ pipeline {
 
         stage('Scan Image') {
             steps {
-                sh "docker run -v $PWD:/myapp aquasec/trivy image --format table -o trivy-image-report.html $DOCKER_IMAGE_NAME"
+                sh "docker run -v $PWD:/myapp trivy image --format table -o trivy-image-report.html $DOCKER_IMAGE_NAME"
             }
         }
 
