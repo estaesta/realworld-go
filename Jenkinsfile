@@ -7,11 +7,12 @@ pipeline {
         PORT = 8080
         DB_PATH = credentials('DB_PATH')
         JWT_SECRET = credentials('JWT_SECRET')
+        WORKSPACE = env.WORKSPACE
     }
     stages {
         stage('Scan Filesystem') {
             steps {
-                sh "docker run --rm -v /tmp/trivy:/root/.cache/trivy -v $PWD:/myapp trivy fs --format table -o /myapp/trivy-fs-report.html /myapp"
+                sh "docker run --rm -v /tmp/trivy:/root/.cache/trivy -v $WORKSPACE:/myapp trivy fs --format table -o /myapp/trivy-fs-report.html /myapp"
             }
         }
 
@@ -27,7 +28,7 @@ pipeline {
 
         stage('Scan Image') {
             steps {
-                sh "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp/trivy:/root/.cache/trivy -v $PWD:/myapp trivy image --format table -o /myapp/trivy-image-report.html $DOCKER_IMAGE_NAME"
+                sh "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp/trivy:/root/.cache/trivy -v $WORKSPACE:/myapp trivy image --format table -o /myapp/trivy-image-report.html $DOCKER_IMAGE_NAME"
             }
         }
 
