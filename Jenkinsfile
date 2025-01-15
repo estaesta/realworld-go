@@ -9,9 +9,9 @@ pipeline {
         JWT_SECRET = credentials('JWT_SECRET')
     }
     stages {
-        stage('Scan') {
+        stage('Scan Filesystem') {
             steps {
-                sh "docker run -v $PWD:/myapp trivy fs --format table -o trivy-fs-report.html /myapp"
+                sh "docker run --rm -v /tmp/trivy:/root/.cache/trivy -v $PWD:/myapp trivy fs --format table -o /myapp/trivy-fs-report.html /myapp"
             }
         }
 
@@ -27,7 +27,7 @@ pipeline {
 
         stage('Scan Image') {
             steps {
-                sh "docker run -v $PWD:/myapp trivy image --format table -o trivy-image-report.html $DOCKER_IMAGE_NAME"
+                sh "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp/trivy:/root/.cache/trivy -v $PWD:/myapp trivy image --format table -o /myapp/trivy-image-report.html $DOCKER_IMAGE_NAME"
             }
         }
 
@@ -46,6 +46,12 @@ pipeline {
                     curl -s http://localhost:$PORT/health | grep -q '"status":"UP"'
                 '''
             }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'trivy-fs-report.html', fingerprint: true
+            archiveArtifacts artifacts: 'trivy-image-report.html', fingerprint: true
         }
     }
 }
