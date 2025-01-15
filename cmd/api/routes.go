@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -38,6 +39,19 @@ func (app *application) loadRoutes() {
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+	})
+
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		res := map[string]interface{}{
+			"status": "UP",
+		}
+		resJson, err := json.Marshal(res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(resJson)
 	})
 
 	r.Route("/api", func(r chi.Router) {
