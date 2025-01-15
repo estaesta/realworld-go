@@ -95,7 +95,7 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 					"username":  v.User.Username,
 					"bio":       v.User.Bio,
 					"image":     v.User.Image,
-					"following": false,
+					"following": v.IsFollowing > 0,
 				},
 			},
 		})
@@ -110,6 +110,32 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) FeedArticles(w http.ResponseWriter, r *http.Request) {
+	// limit := r.URL.Query().Get("limit")
+	// if limit == "" {
+	// 	limit = "20"
+	// }
+	// limitInt, err := strconv.Atoi(limit)
+	// if err != nil {
+	// 	h.clientError(w, http.StatusBadRequest)
+	// 	return
+	// }
+	//
+	// offset := r.URL.Query().Get("offset")
+	// if offset == "" {
+	// 	offset = "0"
+	// }
+	// offsetInt, err := strconv.Atoi(offset)
+	// if err != nil {
+	// 	h.clientError(w, http.StatusBadRequest)
+	// 	return
+	// }
+	//
+	// _, claims, _ := jwtauth.FromContext(r.Context())
+	// user_id, ok := claims["user_id"].(float64)
+	// if !ok {
+	// 	h.clientError(w, http.StatusUnauthorized)
+	// 	return
+	// }
 
 }
 

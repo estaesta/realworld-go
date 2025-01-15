@@ -166,20 +166,27 @@ SELECT
     article.description,
     IFNULL(GROUP_CONCAT(tag.name), '') AS tags,
     CASE
-        WHEN article.id IN 
-        (SELECT article_id FROM favorite WHERE favorite.user_id = ?1) THEN 1
+        WHEN EXISTS(
+        SELECT 1 FROM favorite WHERE article_id = article.id 
+            AND favorite.user_id = ?1
+        ) THEN 1
         ELSE 0
     END AS favorited,
     (SELECT COUNT(*) FROM favorite
     WHERE article_id = article.id) AS favorites_count,
     article.created_at,
     article.updated_at,
-    user.id, user.username, user.email, user.password, user.bio, user.image, user.created_at, user.updated_at
+    user.id, user.username, user.email, user.password, user.bio, user.image, user.created_at, user.updated_at,
+    CASE
+        WHEN following.user_id IS NOT NULL THEN 1
+        ELSE 0
+    END AS is_following
 FROM article
 LEFT JOIN user ON article.author_id = user.id
 LEFT JOIN article_tag ON article.id = article_tag.article_id
 LEFT JOIN tag ON article_tag.tag_id = tag.id
 LEFT JOIN favorite ON article.id = favorite.article_id
+LEFT JOIN following ON article.author_id = following.user_id AND following.follower_id = ?1
 WHERE (user.username = ?2 or ?2 = '')
     AND (tag.name = ?3 or ?3 = '')
     AND (favorite.user_id = ?4 or ?4 = 0)
@@ -207,6 +214,7 @@ type GetArticlesListRow struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	User           User
+	IsFollowing    int64
 }
 
 func (q *Queries) GetArticlesList(ctx context.Context, arg GetArticlesListParams) ([]GetArticlesListRow, error) {
@@ -243,6 +251,7 @@ func (q *Queries) GetArticlesList(ctx context.Context, arg GetArticlesListParams
 			&i.User.Image,
 			&i.User.CreatedAt,
 			&i.User.UpdatedAt,
+			&i.IsFollowing,
 		); err != nil {
 			return nil, err
 		}
