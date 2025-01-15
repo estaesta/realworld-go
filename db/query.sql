@@ -100,3 +100,31 @@ WHERE (user.username = sqlc.arg(author) or sqlc.arg(author) = '')
     AND (favorite.user_id = sqlc.arg(favorited) or sqlc.arg(favorited) = 0)
 GROUP BY article.id
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
+
+-- name: GetArticlesFeed :many
+SELECT 
+    article.id,
+    article.slug,
+    article.title,
+    article.description,
+    IFNULL(GROUP_CONCAT(tag.name), '') AS tags,
+    CASE
+        WHEN EXISTS(
+        SELECT 1 FROM favorite WHERE article_id = article.id 
+            AND favorite.user_id = sqlc.arg('user_id')
+        ) THEN 1
+        ELSE 0
+    END AS favorited,
+    (SELECT COUNT(*) FROM favorite
+    WHERE article_id = article.id) AS favorites_count,
+    article.created_at,
+    article.updated_at,
+    sqlc.embed(user)
+FROM article
+LEFT JOIN user ON article.author_id = user.id
+LEFT JOIN article_tag ON article.id = article_tag.article_id
+LEFT JOIN tag ON article_tag.tag_id = tag.id
+LEFT JOIN favorite ON article.id = favorite.article_id
+JOIN following ON article.author_id = following.user_id AND following.follower_id = sqlc.arg('user_id')
+GROUP BY article.id
+LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');

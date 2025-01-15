@@ -110,32 +110,72 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) FeedArticles(w http.ResponseWriter, r *http.Request) {
-	// limit := r.URL.Query().Get("limit")
-	// if limit == "" {
-	// 	limit = "20"
-	// }
-	// limitInt, err := strconv.Atoi(limit)
-	// if err != nil {
-	// 	h.clientError(w, http.StatusBadRequest)
-	// 	return
-	// }
-	//
-	// offset := r.URL.Query().Get("offset")
-	// if offset == "" {
-	// 	offset = "0"
-	// }
-	// offsetInt, err := strconv.Atoi(offset)
-	// if err != nil {
-	// 	h.clientError(w, http.StatusBadRequest)
-	// 	return
-	// }
-	//
-	// _, claims, _ := jwtauth.FromContext(r.Context())
-	// user_id, ok := claims["user_id"].(float64)
-	// if !ok {
-	// 	h.clientError(w, http.StatusUnauthorized)
-	// 	return
-	// }
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "20"
+	}
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil {
+		h.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	offset := r.URL.Query().Get("offset")
+	if offset == "" {
+		offset = "0"
+	}
+	offsetInt, err := strconv.Atoi(offset)
+	if err != nil {
+		h.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	_, claims, _ := jwtauth.FromContext(r.Context())
+	user_id, ok := claims["user_id"].(float64)
+	if !ok {
+		h.clientError(w, http.StatusUnauthorized)
+		return
+	}
+
+	articles, err := h.Queries.GetArticlesFeed(r.Context(), model.GetArticlesFeedParams{
+		UserID: int64(user_id),
+		Offset: int64(offsetInt),
+		Limit:  int64(limitInt),
+	})
+	if err != nil && err != sql.ErrNoRows {
+		h.serverError(w, err)
+		return
+	}
+
+	res := []map[string]interface{}{}
+	for _, v := range articles {
+		res = append(res, map[string]interface{}{
+			"article": map[string]interface{}{
+				"slug":           v.Slug,
+				"title":          v.Title,
+				"description":    v.Description,
+				"tagList":        strings.Split(v.Tags.(string), ","),
+				"createdAt":      v.CreatedAt,
+				"updatedAt":      v.CreatedAt,
+				"favorited":      v.Favorited > 0,
+				"favoritesCount": v.FavoritesCount,
+				"author": map[string]interface{}{
+					"username":  v.User.Username,
+					"bio":       v.User.Bio,
+					"image":     v.User.Image,
+					"following": true,
+				},
+			},
+		})
+	}
+
+	resJson, err := json.Marshal(res)
+	if err != nil {
+		h.serverError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(resJson)
 
 }
 

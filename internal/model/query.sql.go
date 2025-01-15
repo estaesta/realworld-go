@@ -158,6 +158,95 @@ func (q *Queries) GetArticleBySlug(ctx context.Context, slug string) (GetArticle
 	return i, err
 }
 
+const getArticlesFeed = `-- name: GetArticlesFeed :many
+SELECT 
+    article.id,
+    article.slug,
+    article.title,
+    article.description,
+    IFNULL(GROUP_CONCAT(tag.name), '') AS tags,
+    CASE
+        WHEN EXISTS(
+        SELECT 1 FROM favorite WHERE article_id = article.id 
+            AND favorite.user_id = ?1
+        ) THEN 1
+        ELSE 0
+    END AS favorited,
+    (SELECT COUNT(*) FROM favorite
+    WHERE article_id = article.id) AS favorites_count,
+    article.created_at,
+    article.updated_at,
+    user.id, user.username, user.email, user.password, user.bio, user.image, user.created_at, user.updated_at
+FROM article
+LEFT JOIN user ON article.author_id = user.id
+LEFT JOIN article_tag ON article.id = article_tag.article_id
+LEFT JOIN tag ON article_tag.tag_id = tag.id
+LEFT JOIN favorite ON article.id = favorite.article_id
+JOIN following ON article.author_id = following.user_id AND following.follower_id = ?1
+GROUP BY article.id
+LIMIT ?3 OFFSET ?2
+`
+
+type GetArticlesFeedParams struct {
+	UserID int64
+	Offset int64
+	Limit  int64
+}
+
+type GetArticlesFeedRow struct {
+	ID             int64
+	Slug           string
+	Title          string
+	Description    string
+	Tags           interface{}
+	Favorited      int64
+	FavoritesCount int64
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	User           User
+}
+
+func (q *Queries) GetArticlesFeed(ctx context.Context, arg GetArticlesFeedParams) ([]GetArticlesFeedRow, error) {
+	rows, err := q.db.QueryContext(ctx, getArticlesFeed, arg.UserID, arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetArticlesFeedRow
+	for rows.Next() {
+		var i GetArticlesFeedRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Title,
+			&i.Description,
+			&i.Tags,
+			&i.Favorited,
+			&i.FavoritesCount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.User.ID,
+			&i.User.Username,
+			&i.User.Email,
+			&i.User.Password,
+			&i.User.Bio,
+			&i.User.Image,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getArticlesList = `-- name: GetArticlesList :many
 SELECT 
     article.id,
