@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE_NAME = 'realworld-go'
         DOCKER_CONTAINER_NAME = 'realworld-go'
-        PORT = 8080
+        PORT = 8082
         DB_PATH = credentials('DB_PATH')
         JWT_SECRET = credentials('JWT_SECRET')
     }
