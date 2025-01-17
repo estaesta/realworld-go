@@ -75,6 +75,7 @@ func (app *application) loadRoutes() {
 
 			r.Get("/articles/feed", handler.FeedArticles)
 			r.Post("/articles", handler.CreateArticle)
+			r.Put("/articles/{slug}", handler.UpdateArticle)
 		})
 
 		// Auth optional

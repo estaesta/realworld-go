@@ -118,23 +118,69 @@ func (q *Queries) FollowByUserUsernameAndFollowerID(ctx context.Context, arg Fol
 	return err
 }
 
-const getArticleBySlug = `-- name: GetArticleBySlug :one
-SELECT article.id, article.slug, article.title, article.description, article.body, article.created_at, article.updated_at, article.author_id, user.id, user.username, user.email, user.password, user.bio, user.image, user.created_at, user.updated_at, GROUP_CONCAT(tag.name) AS tag
-FROM article 
-JOIN user ON article.author_id = user.id
-JOIN article_tag ON article.id = article_tag.article_id
-JOIN tag ON article_tag.tag_id = tag.id
+const getArticleAuthorBySlug = `-- name: GetArticleAuthorBySlug :one
+SELECT id, slug, title, description, body, created_at, updated_at, author_id FROM article
 WHERE slug = ?
 `
 
-type GetArticleBySlugRow struct {
-	Article Article
-	User    User
-	Tag     string
+func (q *Queries) GetArticleAuthorBySlug(ctx context.Context, slug string) (Article, error) {
+	row := q.db.QueryRowContext(ctx, getArticleAuthorBySlug, slug)
+	var i Article
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Title,
+		&i.Description,
+		&i.Body,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.AuthorID,
+	)
+	return i, err
 }
 
-func (q *Queries) GetArticleBySlug(ctx context.Context, slug string) (GetArticleBySlugRow, error) {
-	row := q.db.QueryRowContext(ctx, getArticleBySlug, slug)
+const getArticleBySlug = `-- name: GetArticleBySlug :one
+SELECT article.id, article.slug, article.title, article.description, article.body, article.created_at, article.updated_at, article.author_id, 
+    user.id, user.username, user.email, user.password, user.bio, user.image, user.created_at, user.updated_at, 
+    IFNULL(GROUP_CONCAT(tag.name), '') AS tags,
+    CASE
+        WHEN EXISTS(
+        SELECT 1 FROM favorite WHERE article_id = article.id 
+            AND favorite.user_id = ?1
+        ) THEN 1
+        ELSE 0
+    END AS favorited,
+    (SELECT COUNT(*) FROM favorite
+    WHERE article_id = article.id) AS favorites_count,
+    CASE
+        WHEN following.user_id IS NOT NULL THEN 1
+        ELSE 0
+    END AS is_following
+FROM article 
+JOIN user ON article.author_id = user.id
+LEFT JOIN article_tag ON article.id = article_tag.article_id
+LEFT JOIN tag ON article_tag.tag_id = tag.id
+LEFT JOIN favorite ON article.id = favorite.article_id
+LEFT JOIN following ON article.author_id = following.user_id AND following.follower_id = ?1
+WHERE slug = ?2
+`
+
+type GetArticleBySlugParams struct {
+	UserID int64
+	Slug   string
+}
+
+type GetArticleBySlugRow struct {
+	Article        Article
+	User           User
+	Tags           interface{}
+	Favorited      int64
+	FavoritesCount int64
+	IsFollowing    int64
+}
+
+func (q *Queries) GetArticleBySlug(ctx context.Context, arg GetArticleBySlugParams) (GetArticleBySlugRow, error) {
+	row := q.db.QueryRowContext(ctx, getArticleBySlug, arg.UserID, arg.Slug)
 	var i GetArticleBySlugRow
 	err := row.Scan(
 		&i.Article.ID,
@@ -153,7 +199,10 @@ func (q *Queries) GetArticleBySlug(ctx context.Context, slug string) (GetArticle
 		&i.User.Image,
 		&i.User.CreatedAt,
 		&i.User.UpdatedAt,
-		&i.Tag,
+		&i.Tags,
+		&i.Favorited,
+		&i.FavoritesCount,
+		&i.IsFollowing,
 	)
 	return i, err
 }
@@ -507,6 +556,35 @@ type UnfollowByUserIDAndFollowerIDParams struct {
 func (q *Queries) UnfollowByUserIDAndFollowerID(ctx context.Context, arg UnfollowByUserIDAndFollowerIDParams) error {
 	_, err := q.db.ExecContext(ctx, unfollowByUserIDAndFollowerID, arg.UserID, arg.FollowerID)
 	return err
+}
+
+const updateArticle = `-- name: UpdateArticle :one
+UPDATE article SET
+    title = COALESCE(?1, title),
+    description = COALESCE(?2, description),
+    body = COALESCE(?3, body),
+    updated_at = CURRENT_TIMESTAMP
+WHERE slug = ?4
+RETURNING slug
+`
+
+type UpdateArticleParams struct {
+	Title       *string
+	Description *string
+	Body        *string
+	Slug        string
+}
+
+func (q *Queries) UpdateArticle(ctx context.Context, arg UpdateArticleParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, updateArticle,
+		arg.Title,
+		arg.Description,
+		arg.Body,
+		arg.Slug,
+	)
+	var slug string
+	err := row.Scan(&slug)
+	return slug, err
 }
 
 const updateUserByID = `-- name: UpdateUserByID :one

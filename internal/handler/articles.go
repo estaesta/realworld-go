@@ -182,6 +182,15 @@ func (h *Handler) FeedArticles(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetArticle(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 
+	var user_idInt64 int64
+	_, claims, _ := jwtauth.FromContext(r.Context())
+	user_id, ok := claims["user_id"].(float64)
+	if ok {
+		user_idInt64 = int64(user_id)
+	} else {
+		user_idInt64 = 0
+	}
+
 	tx, err := h.DB.BeginTx(r.Context(), nil)
 	if err != nil {
 		h.serverError(w, err)
@@ -191,7 +200,10 @@ func (h *Handler) GetArticle(w http.ResponseWriter, r *http.Request) {
 
 	qtx := h.Queries
 
-	article, err := qtx.GetArticleBySlug(r.Context(), slug)
+	article, err := qtx.GetArticleBySlug(r.Context(), model.GetArticleBySlugParams{
+		UserID: user_idInt64,
+		Slug:   slug,
+	})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			h.notFound(w)
@@ -199,35 +211,6 @@ func (h *Handler) GetArticle(w http.ResponseWriter, r *http.Request) {
 		}
 		h.serverError(w, err)
 		return
-	}
-
-	var isFollowing bool
-	var isFavorited bool
-	_, claims, _ := jwtauth.FromContext(r.Context())
-	user_id, ok := claims["user_id"].(float64)
-	if ok {
-		// check if user_id is following the author
-		following, err := h.Queries.IsUserFollowByUserID(r.Context(),
-			model.IsUserFollowByUserIDParams{
-				UserID:     article.Article.AuthorID,
-				FollowerID: int64(user_id),
-			})
-		if err != nil {
-			h.serverError(w, err)
-			return
-		}
-		isFollowing = following > 0
-		// check if user_id favorited the article
-		favorited, err := h.Queries.IsFavoriteByUserIDAndArticleID(r.Context(),
-			model.IsFavoriteByUserIDAndArticleIDParams{
-				UserID:    int64(user_id),
-				ArticleID: article.Article.ID,
-			})
-		if err != nil {
-			h.serverError(w, err)
-			return
-		}
-		isFavorited = favorited > 0
 	}
 
 	err = tx.Commit()
@@ -242,16 +225,16 @@ func (h *Handler) GetArticle(w http.ResponseWriter, r *http.Request) {
 			"title":          article.Article.Title,
 			"description":    article.Article.Description,
 			"body":           article.Article.Body,
-			"tagList":        strings.Split(article.Tag, ","),
+			"tagList":        strings.Split(article.Tags.(string), ","),
 			"createdAt":      article.Article.CreatedAt,
 			"updatedAt":      article.Article.CreatedAt,
-			"favorited":      isFavorited,
-			"favoritesCount": 0,
+			"favorited":      article.Favorited > 0,
+			"favoritesCount": article.FavoritesCount,
 			"author": map[string]interface{}{
 				"username":  article.User.Username,
 				"bio":       article.User.Bio,
 				"image":     article.User.Image,
-				"following": isFollowing,
+				"following": article.IsFollowing > 0,
 			},
 		},
 	}
@@ -396,6 +379,111 @@ func (h *Handler) CreateArticle(w http.ResponseWriter, r *http.Request) {
 				"bio":       user.Bio,
 				"image":     user.Image,
 				"following": false,
+			},
+		},
+	}
+	resJson, err := json.Marshal(res)
+	if err != nil {
+		h.serverError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(resJson)
+}
+
+func (h *Handler) UpdateArticle(w http.ResponseWriter, r *http.Request) {
+	slug := chi.URLParam(r, "slug")
+	newSlug := slug
+
+	type request struct {
+		Article struct {
+			Title       *string `json:"title"`
+			Description *string `json:"description"`
+			Body        *string `json:"body"`
+		} `json:"article"`
+	}
+	var req request
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		h.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	if req.Article.Title != nil {
+		newSlug := strings.TrimSpace(*req.Article.Title)
+		newSlug = strings.ReplaceAll(newSlug, " ", "-")
+		newSlug = regexp.MustCompile(`[^a-zA-Z0-9\-]+`).ReplaceAllString(newSlug, "")
+		newSlug = strings.ToLower(newSlug)
+		newSlug = fmt.Sprintf("%s-%s", newSlug, time.Now().Format("20060102150405"))
+	}
+
+	_, claims, err := jwtauth.FromContext(r.Context())
+	user_id := int64(claims["user_id"].(float64))
+
+	tx, err := h.DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		h.serverError(w, err)
+		return
+	}
+	defer tx.Rollback()
+
+	qtx := h.Queries.WithTx(tx)
+
+	// authorization
+	authorID, err := qtx.GetArticleAuthorBySlug(r.Context(), slug)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			h.clientError(w, http.StatusBadRequest)
+			return
+		}
+		h.serverError(w, err)
+		return
+	}
+	if authorID.AuthorID != user_id {
+		h.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	rSlug, err := qtx.UpdateArticle(r.Context(), model.UpdateArticleParams{
+		Slug:        newSlug,
+		Body:        req.Article.Body,
+		Title:       req.Article.Title,
+		Description: req.Article.Description,
+	})
+	if err != nil {
+		if err == sql.ErrNoRows {
+			h.clientError(w, http.StatusBadRequest)
+			return
+		}
+		h.serverError(w, err)
+		return
+	}
+
+	article, err := qtx.GetArticleBySlug(r.Context(), model.GetArticleBySlugParams{
+		UserID: user_id,
+		Slug:   rSlug,
+	})
+	if err != nil && err != sql.ErrNoRows {
+		h.serverError(w, err)
+		return
+	}
+
+	res := map[string]interface{}{
+		"article": map[string]interface{}{
+			"slug":           article.Article.Slug,
+			"title":          article.Article.Title,
+			"description":    article.Article.Description,
+			"body":           article.Article.Body,
+			"tagList":        strings.Split(article.Tags.(string), ","),
+			"createdAt":      article.Article.CreatedAt,
+			"updatedAt":      article.Article.UpdatedAt,
+			"favorited":      article.Favorited > 0,
+			"favoritesCount": article.FavoritesCount,
+			"author": map[string]interface{}{
+				"username":  article.User.Username,
+				"bio":       article.User.Bio,
+				"image":     article.User.Image,
+				"following": article.IsFollowing > 0,
 			},
 		},
 	}

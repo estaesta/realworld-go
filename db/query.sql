@@ -54,17 +54,38 @@ INSERT OR IGNORE INTO article_tag (article_id, tag_id)
 SELECT ?, ?;
 
 -- name: GetArticleBySlug :one
-SELECT sqlc.embed(article), sqlc.embed(user), GROUP_CONCAT(tag.name) AS tag
+SELECT sqlc.embed(article), 
+    sqlc.embed(user), 
+    IFNULL(GROUP_CONCAT(tag.name), '') AS tags,
+    CASE
+        WHEN EXISTS(
+        SELECT 1 FROM favorite WHERE article_id = article.id 
+            AND favorite.user_id = sqlc.arg('user_id')
+        ) THEN 1
+        ELSE 0
+    END AS favorited,
+    (SELECT COUNT(*) FROM favorite
+    WHERE article_id = article.id) AS favorites_count,
+    CASE
+        WHEN following.user_id IS NOT NULL THEN 1
+        ELSE 0
+    END AS is_following
 FROM article 
 JOIN user ON article.author_id = user.id
-JOIN article_tag ON article.id = article_tag.article_id
-JOIN tag ON article_tag.tag_id = tag.id
-WHERE slug = ?;
+LEFT JOIN article_tag ON article.id = article_tag.article_id
+LEFT JOIN tag ON article_tag.tag_id = tag.id
+LEFT JOIN favorite ON article.id = favorite.article_id
+LEFT JOIN following ON article.author_id = following.user_id AND following.follower_id = sqlc.arg('user_id')
+WHERE slug = sqlc.arg('slug');
 
 -- name: IsFavoriteByUserIDAndArticleID :one
 SELECT COUNT(*) FROM favorite
 WHERE user_id = ?
 AND article_id = ?;
+
+-- name: GetArticleAuthorBySlug :one
+SELECT * FROM article
+WHERE slug = ?;
 
 -- name: GetArticlesList :many
 SELECT 
@@ -128,3 +149,12 @@ LEFT JOIN favorite ON article.id = favorite.article_id
 JOIN following ON article.author_id = following.user_id AND following.follower_id = sqlc.arg('user_id')
 GROUP BY article.id
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
+
+-- name: UpdateArticle :one
+UPDATE article SET
+    title = COALESCE(sqlc.narg('title'), title),
+    description = COALESCE(sqlc.narg('description'), description),
+    body = COALESCE(sqlc.narg('body'), body),
+    updated_at = CURRENT_TIMESTAMP
+WHERE slug = sqlc.arg('slug')
+RETURNING slug;
