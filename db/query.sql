@@ -76,7 +76,8 @@ LEFT JOIN article_tag ON article.id = article_tag.article_id
 LEFT JOIN tag ON article_tag.tag_id = tag.id
 LEFT JOIN favorite ON article.id = favorite.article_id
 LEFT JOIN following ON article.author_id = following.user_id AND following.follower_id = sqlc.arg('user_id')
-WHERE slug = sqlc.arg('slug');
+WHERE slug = sqlc.arg('slug')
+GROUP BY article.id;
 
 -- name: IsFavoriteByUserIDAndArticleID :one
 SELECT COUNT(*) FROM favorite
@@ -84,7 +85,7 @@ WHERE user_id = ?
 AND article_id = ?;
 
 -- name: GetArticleAuthorBySlug :one
-SELECT * FROM article
+SELECT author_id FROM article
 WHERE slug = ?;
 
 -- name: GetArticlesList :many
@@ -158,3 +159,6 @@ UPDATE article SET
     updated_at = CURRENT_TIMESTAMP
 WHERE slug = sqlc.arg('slug')
 RETURNING slug;
+
+-- name: DeleteArticleBySlug :exec
+DELETE FROM article WHERE slug = sqlc.arg('slug');

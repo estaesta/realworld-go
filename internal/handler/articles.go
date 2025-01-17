@@ -439,7 +439,7 @@ func (h *Handler) UpdateArticle(w http.ResponseWriter, r *http.Request) {
 		h.serverError(w, err)
 		return
 	}
-	if authorID.AuthorID != user_id {
+	if authorID != user_id {
 		h.clientError(w, http.StatusBadRequest)
 		return
 	}
@@ -464,6 +464,12 @@ func (h *Handler) UpdateArticle(w http.ResponseWriter, r *http.Request) {
 		Slug:   rSlug,
 	})
 	if err != nil && err != sql.ErrNoRows {
+		h.serverError(w, err)
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
 		h.serverError(w, err)
 		return
 	}
@@ -494,4 +500,50 @@ func (h *Handler) UpdateArticle(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(resJson)
+}
+
+func (h *Handler) DeleteArticle(w http.ResponseWriter, r *http.Request) {
+	slug := chi.URLParam(r, "slug")
+	_, claims, _ := jwtauth.FromContext(r.Context())
+	user_id := int64(claims["user_id"].(float64))
+
+	tx, err := h.DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		h.serverError(w, err)
+		return
+	}
+	defer tx.Rollback()
+
+	qtx := h.Queries.WithTx(tx)
+
+	// authorize
+
+	authorID, err := qtx.GetArticleAuthorBySlug(r.Context(), slug)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			h.clientError(w, http.StatusNotFound)
+			return
+		}
+		h.serverError(w, err)
+		return
+	}
+
+	if authorID != user_id {
+		h.clientError(w, http.StatusForbidden)
+		return
+	}
+
+	err = qtx.DeleteArticleBySlug(r.Context(), slug)
+	if err != nil {
+		h.serverError(w, err)
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		h.serverError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

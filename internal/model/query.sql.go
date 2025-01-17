@@ -101,6 +101,15 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deleteArticleBySlug = `-- name: DeleteArticleBySlug :exec
+DELETE FROM article WHERE slug = ?1
+`
+
+func (q *Queries) DeleteArticleBySlug(ctx context.Context, slug string) error {
+	_, err := q.db.ExecContext(ctx, deleteArticleBySlug, slug)
+	return err
+}
+
 const followByUserUsernameAndFollowerID = `-- name: FollowByUserUsernameAndFollowerID :exec
 INSERT INTO following (user_id, follower_id)
 SELECT u.id, ?
@@ -119,24 +128,15 @@ func (q *Queries) FollowByUserUsernameAndFollowerID(ctx context.Context, arg Fol
 }
 
 const getArticleAuthorBySlug = `-- name: GetArticleAuthorBySlug :one
-SELECT id, slug, title, description, body, created_at, updated_at, author_id FROM article
+SELECT author_id FROM article
 WHERE slug = ?
 `
 
-func (q *Queries) GetArticleAuthorBySlug(ctx context.Context, slug string) (Article, error) {
+func (q *Queries) GetArticleAuthorBySlug(ctx context.Context, slug string) (int64, error) {
 	row := q.db.QueryRowContext(ctx, getArticleAuthorBySlug, slug)
-	var i Article
-	err := row.Scan(
-		&i.ID,
-		&i.Slug,
-		&i.Title,
-		&i.Description,
-		&i.Body,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.AuthorID,
-	)
-	return i, err
+	var author_id int64
+	err := row.Scan(&author_id)
+	return author_id, err
 }
 
 const getArticleBySlug = `-- name: GetArticleBySlug :one
@@ -163,6 +163,7 @@ LEFT JOIN tag ON article_tag.tag_id = tag.id
 LEFT JOIN favorite ON article.id = favorite.article_id
 LEFT JOIN following ON article.author_id = following.user_id AND following.follower_id = ?1
 WHERE slug = ?2
+GROUP BY article.id
 `
 
 type GetArticleBySlugParams struct {
