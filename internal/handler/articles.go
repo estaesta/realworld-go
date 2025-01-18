@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"regexp"
 	"slices"
@@ -278,7 +280,13 @@ func (h *Handler) CreateArticle(w http.ResponseWriter, r *http.Request) {
 	slug = strings.ReplaceAll(slug, " ", "-")
 	slug = regexp.MustCompile(`[^a-zA-Z0-9\-]+`).ReplaceAllString(slug, "")
 	slug = strings.ToLower(slug)
-	slug = fmt.Sprintf("%s-%s", slug, time.Now().Format("20060102150405"))
+	// random string
+	random, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		h.serverError(w, err)
+		return
+	}
+	slug = fmt.Sprintf("%s-%s%5d", slug, time.Now().Format("20060102150405"), random)
 
 	tx, err := h.DB.BeginTx(r.Context(), nil)
 	if err != nil {
@@ -414,7 +422,13 @@ func (h *Handler) UpdateArticle(w http.ResponseWriter, r *http.Request) {
 		newSlug = strings.ReplaceAll(newSlug, " ", "-")
 		newSlug = regexp.MustCompile(`[^a-zA-Z0-9\-]+`).ReplaceAllString(newSlug, "")
 		newSlug = strings.ToLower(newSlug)
-		newSlug = fmt.Sprintf("%s-%s", newSlug, time.Now().Format("20060102150405"))
+		// random string
+		random, err := rand.Int(rand.Reader, big.NewInt(1000000))
+		if err != nil {
+			h.serverError(w, err)
+			return
+		}
+		slug = fmt.Sprintf("%s-%s%5d", slug, time.Now().Format("20060102150405"), random)
 	}
 
 	_, claims, err := jwtauth.FromContext(r.Context())
