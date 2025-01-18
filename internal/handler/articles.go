@@ -81,26 +81,27 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := []map[string]interface{}{}
+	res := map[string]interface{}{
+		"articles":      []map[string]interface{}{},
+		"articlesCount": len(articles),
+	}
+
 	for _, v := range articles {
-		res = append(res, map[string]interface{}{
-			"articles": map[string]interface{}{
-				"slug":           v.Slug,
-				"title":          v.Title,
-				"description":    v.Description,
-				"tagList":        strings.Split(v.Tags.(string), ","),
-				"createdAt":      v.CreatedAt,
-				"updatedAt":      v.CreatedAt,
-				"favorited":      v.Favorited > 0,
-				"favoritesCount": v.FavoritesCount,
-				"author": map[string]interface{}{
-					"username":  v.User.Username,
-					"bio":       v.User.Bio,
-					"image":     v.User.Image,
-					"following": v.IsFollowing > 0,
-				},
+		res["articles"] = append(res["articles"].([]map[string]interface{}), map[string]interface{}{
+			"slug":           v.Slug,
+			"title":          v.Title,
+			"description":    v.Description,
+			"tagList":        strings.Split(v.Tags.(string), ","),
+			"createdAt":      v.CreatedAt,
+			"updatedAt":      v.CreatedAt,
+			"favorited":      v.Favorited > 0,
+			"favoritesCount": v.FavoritesCount,
+			"author": map[string]interface{}{
+				"username":  v.User.Username,
+				"bio":       v.User.Bio,
+				"image":     v.User.Image,
+				"following": v.IsFollowing > 0,
 			},
-			"articlesCount": len(articles),
 		})
 	}
 	resJson, err := json.Marshal(res)
@@ -150,26 +151,26 @@ func (h *Handler) FeedArticles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := []map[string]interface{}{}
+	res := map[string]interface{}{
+		"articles":      []map[string]interface{}{},
+		"articlesCount": len(articles),
+	}
 	for _, v := range articles {
-		res = append(res, map[string]interface{}{
-			"articles": map[string]interface{}{
-				"slug":           v.Slug,
-				"title":          v.Title,
-				"description":    v.Description,
-				"tagList":        strings.Split(v.Tags.(string), ","),
-				"createdAt":      v.CreatedAt,
-				"updatedAt":      v.CreatedAt,
-				"favorited":      v.Favorited > 0,
-				"favoritesCount": v.FavoritesCount,
-				"author": map[string]interface{}{
-					"username":  v.User.Username,
-					"bio":       v.User.Bio,
-					"image":     v.User.Image,
-					"following": true,
-				},
+		res["articles"] = append(res["articles"].([]map[string]interface{}), map[string]interface{}{
+			"slug":           v.Slug,
+			"title":          v.Title,
+			"description":    v.Description,
+			"tagList":        strings.Split(v.Tags.(string), ","),
+			"createdAt":      v.CreatedAt,
+			"updatedAt":      v.CreatedAt,
+			"favorited":      v.Favorited > 0,
+			"favoritesCount": v.FavoritesCount,
+			"author": map[string]interface{}{
+				"username":  v.User.Username,
+				"bio":       v.User.Bio,
+				"image":     v.User.Image,
+				"following": true,
 			},
-			"articlesCount": len(articles),
 		})
 	}
 
