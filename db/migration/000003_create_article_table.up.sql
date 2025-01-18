@@ -1,6 +1,6 @@
 CREATE TABLE article (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     body TEXT NOT NULL,

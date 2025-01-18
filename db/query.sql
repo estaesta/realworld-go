@@ -162,3 +162,8 @@ RETURNING slug;
 
 -- name: DeleteArticleBySlug :exec
 DELETE FROM article WHERE slug = sqlc.arg('slug');
+
+-- name: AddComment :one
+INSERT INTO comment (body, author_id, article_id)
+VALUES (?, ?, (SELECT id FROM article WHERE slug = @slug))
+RETURNING *;

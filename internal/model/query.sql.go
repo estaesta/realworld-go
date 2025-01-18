@@ -11,6 +11,32 @@ import (
 	"time"
 )
 
+const addComment = `-- name: AddComment :one
+INSERT INTO comment (body, author_id, article_id)
+VALUES (?, ?, (SELECT id FROM article WHERE slug = ?))
+RETURNING id, body, created_at, updated_at, author_id, article_id
+`
+
+type AddCommentParams struct {
+	Body     string
+	AuthorID int64
+	Slug     string
+}
+
+func (q *Queries) AddComment(ctx context.Context, arg AddCommentParams) (Comment, error) {
+	row := q.db.QueryRowContext(ctx, addComment, arg.Body, arg.AuthorID, arg.Slug)
+	var i Comment
+	err := row.Scan(
+		&i.ID,
+		&i.Body,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.AuthorID,
+		&i.ArticleID,
+	)
+	return i, err
+}
+
 const createArticle = `-- name: CreateArticle :one
 INSERT INTO article (slug, title, description, body, author_id) 
 VALUES (?, ?, ?, ?, ?) 
