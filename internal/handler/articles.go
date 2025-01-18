@@ -100,6 +100,7 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 					"following": v.IsFollowing > 0,
 				},
 			},
+			"articlesCount": len(articles),
 		})
 	}
 	resJson, err := json.Marshal(res)
@@ -168,6 +169,7 @@ func (h *Handler) FeedArticles(w http.ResponseWriter, r *http.Request) {
 					"following": true,
 				},
 			},
+			"articlesCount": len(articles),
 		})
 	}
 
