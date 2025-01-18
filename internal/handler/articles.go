@@ -84,7 +84,7 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 	res := []map[string]interface{}{}
 	for _, v := range articles {
 		res = append(res, map[string]interface{}{
-			"article": map[string]interface{}{
+			"articles": map[string]interface{}{
 				"slug":           v.Slug,
 				"title":          v.Title,
 				"description":    v.Description,
@@ -153,7 +153,7 @@ func (h *Handler) FeedArticles(w http.ResponseWriter, r *http.Request) {
 	res := []map[string]interface{}{}
 	for _, v := range articles {
 		res = append(res, map[string]interface{}{
-			"article": map[string]interface{}{
+			"articles": map[string]interface{}{
 				"slug":           v.Slug,
 				"title":          v.Title,
 				"description":    v.Description,
