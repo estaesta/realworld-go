@@ -77,6 +77,7 @@ func (app *application) loadRoutes() {
 			r.Post("/articles", handler.CreateArticle)
 			r.Put("/articles/{slug}", handler.UpdateArticle)
 			r.Delete("/articles/{slug}", handler.DeleteArticle)
+			r.Post("/articles/{slug}/comments", handler.AddComment)
 		})
 
 		// Auth optional
