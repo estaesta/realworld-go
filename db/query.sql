@@ -118,7 +118,11 @@ LEFT JOIN tag ON article_tag.tag_id = tag.id
 LEFT JOIN favorite ON article.id = favorite.article_id
 LEFT JOIN following ON article.author_id = following.user_id AND following.follower_id = sqlc.arg('user_id')
 WHERE (user.username = sqlc.arg(author) or sqlc.arg(author) = '')
-    AND (tag.name = sqlc.arg(tag) or sqlc.arg(tag) = '')
+    AND (article.id IN (
+        SELECT article_id FROM article_tag
+        JOIN tag ON article_tag.tag_id = tag.id
+        WHERE tag.name = sqlc.arg(tag)
+        ) OR sqlc.arg(tag) = '')
     AND (favorite.user_id = sqlc.arg(favorited) or sqlc.arg(favorited) = 0)
 GROUP BY article.id
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');

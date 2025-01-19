@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -88,10 +89,15 @@ func (h *Handler) ListArticles(w http.ResponseWriter, r *http.Request) {
 
 	for _, v := range articles {
 		res["articles"] = append(res["articles"].([]map[string]interface{}), map[string]interface{}{
-			"slug":           v.Slug,
-			"title":          v.Title,
-			"description":    v.Description,
-			"tagList":        strings.Split(v.Tags.(string), ","),
+			"slug":        v.Slug,
+			"title":       v.Title,
+			"description": v.Description,
+			// "tagList":        strings.Split(v.Tags.(string), ","),
+			"tagList": func() []string {
+				tags := strings.Split(v.Tags.(string), ",")
+				sort.Strings(tags)
+				return tags
+			}(),
 			"createdAt":      v.CreatedAt,
 			"updatedAt":      v.CreatedAt,
 			"favorited":      v.Favorited > 0,
@@ -157,10 +163,14 @@ func (h *Handler) FeedArticles(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, v := range articles {
 		res["articles"] = append(res["articles"].([]map[string]interface{}), map[string]interface{}{
-			"slug":           v.Slug,
-			"title":          v.Title,
-			"description":    v.Description,
-			"tagList":        strings.Split(v.Tags.(string), ","),
+			"slug":        v.Slug,
+			"title":       v.Title,
+			"description": v.Description,
+			"tagList": func() []string {
+				tags := strings.Split(v.Tags.(string), ",")
+				sort.Strings(tags)
+				return tags
+			}(),
 			"createdAt":      v.CreatedAt,
 			"updatedAt":      v.CreatedAt,
 			"favorited":      v.Favorited > 0,
@@ -226,11 +236,16 @@ func (h *Handler) GetArticle(w http.ResponseWriter, r *http.Request) {
 
 	res := map[string]interface{}{
 		"article": map[string]interface{}{
-			"slug":           article.Article.Slug,
-			"title":          article.Article.Title,
-			"description":    article.Article.Description,
-			"body":           article.Article.Body,
-			"tagList":        strings.Split(article.Tags.(string), ","),
+			"slug":        article.Article.Slug,
+			"title":       article.Article.Title,
+			"description": article.Article.Description,
+			"body":        article.Article.Body,
+			// "tagList":        strings.Split(article.Tags.(string), ","),
+			"tagList": func() []string {
+				tags := strings.Split(article.Tags.(string), ",")
+				sort.Strings(tags)
+				return tags
+			}(),
 			"createdAt":      article.Article.CreatedAt,
 			"updatedAt":      article.Article.CreatedAt,
 			"favorited":      article.Favorited > 0,
@@ -376,11 +391,16 @@ func (h *Handler) CreateArticle(w http.ResponseWriter, r *http.Request) {
 
 	res := map[string]interface{}{
 		"article": map[string]interface{}{
-			"slug":           slug,
-			"title":          req.Article.Title,
-			"description":    req.Article.Description,
-			"body":           req.Article.Body,
-			"tagList":        req.Article.TagList,
+			"slug":        slug,
+			"title":       req.Article.Title,
+			"description": req.Article.Description,
+			"body":        req.Article.Body,
+			// "tagList":        req.Article.TagList,
+			"tagList": func() []string {
+				tags := req.Article.TagList
+				sort.Strings(tags)
+				return tags
+			}(),
 			"createdAt":      articleID.CreatedAt,
 			"updatedAt":      articleID.CreatedAt,
 			"favorited":      false,
@@ -493,11 +513,16 @@ func (h *Handler) UpdateArticle(w http.ResponseWriter, r *http.Request) {
 
 	res := map[string]interface{}{
 		"article": map[string]interface{}{
-			"slug":           article.Article.Slug,
-			"title":          article.Article.Title,
-			"description":    article.Article.Description,
-			"body":           article.Article.Body,
-			"tagList":        strings.Split(article.Tags.(string), ","),
+			"slug":        article.Article.Slug,
+			"title":       article.Article.Title,
+			"description": article.Article.Description,
+			"body":        article.Article.Body,
+			// "tagList":        strings.Split(article.Tags.(string), ","),
+			"tagList": func() []string {
+				tags := strings.Split(article.Tags.(string), ",")
+				sort.Strings(tags)
+				return tags
+			}(),
 			"createdAt":      article.Article.CreatedAt,
 			"updatedAt":      article.Article.UpdatedAt,
 			"favorited":      article.Favorited > 0,

@@ -353,7 +353,11 @@ LEFT JOIN tag ON article_tag.tag_id = tag.id
 LEFT JOIN favorite ON article.id = favorite.article_id
 LEFT JOIN following ON article.author_id = following.user_id AND following.follower_id = ?1
 WHERE (user.username = ?2 or ?2 = '')
-    AND (tag.name = ?3 or ?3 = '')
+    AND (article.id IN (
+        SELECT article_id FROM article_tag
+        JOIN tag ON article_tag.tag_id = tag.id
+        WHERE tag.name = ?3
+        ) OR ?3 = '')
     AND (favorite.user_id = ?4 or ?4 = 0)
 GROUP BY article.id
 LIMIT ?6 OFFSET ?5
