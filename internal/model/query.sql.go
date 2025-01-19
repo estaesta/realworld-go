@@ -136,6 +136,45 @@ func (q *Queries) DeleteArticleBySlug(ctx context.Context, slug string) error {
 	return err
 }
 
+const deleteCommentByIDAndSlug = `-- name: DeleteCommentByIDAndSlug :execrows
+DELETE FROM comment 
+WHERE comment.id = ?1 
+    AND article_id = (SELECT id FROM article WHERE slug = ?2)
+    AND comment.author_id = ?3
+`
+
+type DeleteCommentByIDAndSlugParams struct {
+	ID     int64
+	Slug   string
+	UserID int64
+}
+
+func (q *Queries) DeleteCommentByIDAndSlug(ctx context.Context, arg DeleteCommentByIDAndSlugParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteCommentByIDAndSlug, arg.ID, arg.Slug, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const favoritArticle = `-- name: FavoritArticle :execrows
+INSERT INTO favorite (user_id, article_id)
+VALUES (?1, (SELECT id FROM article WHERE slug = ?2))
+`
+
+type FavoritArticleParams struct {
+	UserID int64
+	Slug   string
+}
+
+func (q *Queries) FavoritArticle(ctx context.Context, arg FavoritArticleParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, favoritArticle, arg.UserID, arg.Slug)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const followByUserUsernameAndFollowerID = `-- name: FollowByUserUsernameAndFollowerID :exec
 INSERT INTO following (user_id, follower_id)
 SELECT u.id, ?
@@ -412,6 +451,69 @@ func (q *Queries) GetArticlesList(ctx context.Context, arg GetArticlesListParams
 			&i.FavoritesCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.User.ID,
+			&i.User.Username,
+			&i.User.Email,
+			&i.User.Password,
+			&i.User.Bio,
+			&i.User.Image,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+			&i.IsFollowing,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getComments = `-- name: GetComments :many
+SELECT comment.id, comment.body, comment.created_at, comment.updated_at, comment.author_id, comment.article_id,
+    user.id, user.username, user.email, user.password, user.bio, user.image, user.created_at, user.updated_at,
+    CASE
+        WHEN following.user_id IS NOT NULL THEN 1
+        ELSE 0
+    END AS is_following
+FROM comment 
+JOIN user ON comment.author_id = user.id
+LEFT JOIN following ON comment.author_id = following.user_id AND following.follower_id = ?1
+WHERE article_id = (SELECT id FROM article WHERE slug = ?2)
+`
+
+type GetCommentsParams struct {
+	UserID int64
+	Slug   string
+}
+
+type GetCommentsRow struct {
+	Comment     Comment
+	User        User
+	IsFollowing int64
+}
+
+func (q *Queries) GetComments(ctx context.Context, arg GetCommentsParams) ([]GetCommentsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getComments, arg.UserID, arg.Slug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCommentsRow
+	for rows.Next() {
+		var i GetCommentsRow
+		if err := rows.Scan(
+			&i.Comment.ID,
+			&i.Comment.Body,
+			&i.Comment.CreatedAt,
+			&i.Comment.UpdatedAt,
+			&i.Comment.AuthorID,
+			&i.Comment.ArticleID,
 			&i.User.ID,
 			&i.User.Username,
 			&i.User.Email,

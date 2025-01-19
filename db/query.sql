@@ -171,3 +171,25 @@ DELETE FROM article WHERE slug = sqlc.arg('slug');
 INSERT INTO comment (body, author_id, article_id)
 VALUES (?, ?, (SELECT id FROM article WHERE slug = @slug))
 RETURNING *;
+
+-- name: GetComments :many
+SELECT sqlc.embed(comment),
+    sqlc.embed(user),
+    CASE
+        WHEN following.user_id IS NOT NULL THEN 1
+        ELSE 0
+    END AS is_following
+FROM comment 
+JOIN user ON comment.author_id = user.id
+LEFT JOIN following ON comment.author_id = following.user_id AND following.follower_id = sqlc.arg('user_id')
+WHERE article_id = (SELECT id FROM article WHERE slug = sqlc.arg('slug'));
+
+-- name: DeleteCommentByIDAndSlug :execrows
+DELETE FROM comment 
+WHERE comment.id = sqlc.arg('id') 
+    AND article_id = (SELECT id FROM article WHERE slug = sqlc.arg('slug'))
+    AND comment.author_id = sqlc.arg('user_id');
+
+-- name: FavoritArticle :execrows
+INSERT INTO favorite (user_id, article_id)
+VALUES (sqlc.arg('user_id'), (SELECT id FROM article WHERE slug = sqlc.arg('slug')));

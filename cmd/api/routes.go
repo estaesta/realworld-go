@@ -77,7 +77,11 @@ func (app *application) loadRoutes() {
 			r.Post("/articles", handler.CreateArticle)
 			r.Put("/articles/{slug}", handler.UpdateArticle)
 			r.Delete("/articles/{slug}", handler.DeleteArticle)
+
 			r.Post("/articles/{slug}/comments", handler.AddComment)
+			r.Delete("/articles/{slug}/comments/{id}", handler.DeleteComment)
+
+			r.Post("/articles/{slug}/favorite", handler.FavoriteArticle)
 		})
 
 		// Auth optional
@@ -85,8 +89,11 @@ func (app *application) loadRoutes() {
 			r.Use(custommiddleware.Verifier(app.token))
 
 			r.Get("/profiles/{username}", handler.GetProfile)
+
 			r.Get("/articles", handler.ListArticles)
 			r.Get("/articles/{slug}", handler.GetArticle)
+
+			r.Get("/articles/{slug}/comments", handler.GetComments)
 		})
 
 	})
