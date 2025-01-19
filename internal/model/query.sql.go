@@ -8,7 +8,6 @@ package model
 import (
 	"context"
 	"strings"
-	"time"
 )
 
 const addComment = `-- name: AddComment :one
@@ -40,7 +39,7 @@ func (q *Queries) AddComment(ctx context.Context, arg AddCommentParams) (Comment
 const createArticle = `-- name: CreateArticle :one
 INSERT INTO article (slug, title, description, body, author_id) 
 VALUES (?, ?, ?, ?, ?) 
-RETURNING id, created_at
+RETURNING id, created_at, updated_at
 `
 
 type CreateArticleParams struct {
@@ -53,7 +52,8 @@ type CreateArticleParams struct {
 
 type CreateArticleRow struct {
 	ID        int64
-	CreatedAt time.Time
+	CreatedAt string
+	UpdatedAt string
 }
 
 func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (CreateArticleRow, error) {
@@ -65,7 +65,7 @@ func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (C
 		arg.AuthorID,
 	)
 	var i CreateArticleRow
-	err := row.Scan(&i.ID, &i.CreatedAt)
+	err := row.Scan(&i.ID, &i.CreatedAt, &i.UpdatedAt)
 	return i, err
 }
 
@@ -277,8 +277,8 @@ type GetArticlesFeedRow struct {
 	Tags           interface{}
 	Favorited      int64
 	FavoritesCount int64
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	CreatedAt      string
+	UpdatedAt      string
 	User           User
 }
 
@@ -376,8 +376,8 @@ type GetArticlesListRow struct {
 	Tags           interface{}
 	Favorited      int64
 	FavoritesCount int64
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	CreatedAt      string
+	UpdatedAt      string
 	User           User
 	IsFollowing    int64
 }
@@ -590,7 +590,7 @@ UPDATE article SET
     title = COALESCE(?1, title),
     description = COALESCE(?2, description),
     body = COALESCE(?3, body),
-    updated_at = CURRENT_TIMESTAMP
+    updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 WHERE slug = ?4
 RETURNING slug
 `

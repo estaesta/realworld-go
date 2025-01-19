@@ -40,7 +40,7 @@ AND follower_id = sqlc.arg('follower_id');
 -- name: CreateArticle :one
 INSERT INTO article (slug, title, description, body, author_id) 
 VALUES (?, ?, ?, ?, ?) 
-RETURNING id, created_at;
+RETURNING id, created_at, updated_at;
 
 -- name: CreateTag :one
 INSERT OR IGNORE INTO tag (name) VALUES (?)
@@ -156,7 +156,7 @@ UPDATE article SET
     title = COALESCE(sqlc.narg('title'), title),
     description = COALESCE(sqlc.narg('description'), description),
     body = COALESCE(sqlc.narg('body'), body),
-    updated_at = CURRENT_TIMESTAMP
+    updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 WHERE slug = sqlc.arg('slug')
 RETURNING slug;
 

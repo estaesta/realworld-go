@@ -4,8 +4,8 @@ CREATE TABLE article (
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     body TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     author_id INTEGER NOT NULL,
     FOREIGN KEY (author_id) REFERENCES user(id) ON DELETE CASCADE
 );

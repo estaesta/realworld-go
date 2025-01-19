@@ -14,8 +14,8 @@ type Article struct {
 	Title       string
 	Description string
 	Body        string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	CreatedAt   string
+	UpdatedAt   string
 	AuthorID    int64
 }
 
@@ -28,8 +28,8 @@ type ArticleTag struct {
 type Comment struct {
 	ID        int64
 	Body      string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt string
+	UpdatedAt string
 	AuthorID  int64
 	ArticleID int64
 }
