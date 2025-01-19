@@ -192,6 +192,33 @@ func (q *Queries) FollowByUserUsernameAndFollowerID(ctx context.Context, arg Fol
 	return err
 }
 
+const getAllTagsName = `-- name: GetAllTagsName :many
+SELECT name FROM tag
+`
+
+func (q *Queries) GetAllTagsName(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getAllTagsName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		items = append(items, name)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getArticleAuthorBySlug = `-- name: GetArticleAuthorBySlug :one
 SELECT author_id FROM article
 WHERE slug = ?
@@ -673,6 +700,25 @@ func (q *Queries) IsUserFollowByUserID(ctx context.Context, arg IsUserFollowByUs
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const unfavoriteArticle = `-- name: UnfavoriteArticle :execrows
+DELETE FROM favorite
+WHERE user_id = ?1
+    AND article_id = (SELECT id FROM article WHERE slug = ?2)
+`
+
+type UnfavoriteArticleParams struct {
+	UserID int64
+	Slug   string
+}
+
+func (q *Queries) UnfavoriteArticle(ctx context.Context, arg UnfavoriteArticleParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, unfavoriteArticle, arg.UserID, arg.Slug)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const unfollowByUserIDAndFollowerID = `-- name: UnfollowByUserIDAndFollowerID :exec

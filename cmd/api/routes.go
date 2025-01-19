@@ -61,6 +61,8 @@ func (app *application) loadRoutes() {
 			r.Post("/login", handler.Login)
 		})
 
+		r.Get("/tags", handler.GetTags)
+
 		// Auth required
 		r.Group(func(r chi.Router) {
 			// Seek, verify and validate JWT tokens
@@ -82,6 +84,7 @@ func (app *application) loadRoutes() {
 			r.Delete("/articles/{slug}/comments/{id}", handler.DeleteComment)
 
 			r.Post("/articles/{slug}/favorite", handler.FavoriteArticle)
+			r.Delete("/articles/{slug}/favorite", handler.UnfavoriteArticle)
 		})
 
 		// Auth optional

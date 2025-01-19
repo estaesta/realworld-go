@@ -49,6 +49,9 @@ INSERT OR IGNORE INTO tag (name) VALUES (?)
 -- name: GetTags :many
 SELECT * FROM tag WHERE name IN(sqlc.slice('tags'));
 
+-- name: GetAllTagsName :many
+SELECT name FROM tag;
+
 -- name: CreateArticleTag :exec
 INSERT OR IGNORE INTO article_tag (article_id, tag_id)
 SELECT ?, ?;
@@ -193,3 +196,8 @@ WHERE comment.id = sqlc.arg('id')
 -- name: FavoritArticle :execrows
 INSERT INTO favorite (user_id, article_id)
 VALUES (sqlc.arg('user_id'), (SELECT id FROM article WHERE slug = sqlc.arg('slug')));
+
+-- name: UnfavoriteArticle :execrows
+DELETE FROM favorite
+WHERE user_id = sqlc.arg('user_id')
+    AND article_id = (SELECT id FROM article WHERE slug = sqlc.arg('slug'));
