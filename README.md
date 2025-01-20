@@ -12,6 +12,16 @@ RealWorld is a clone of [Medium](https://medium.com) built with a purpose to lea
 - Favorite article
 - Follow user
 
+## Technologies used
+
+- Go
+- chi
+- sqlite3 for database
+- sqlc for database code generation
+- Docker
+- Jenkins
+- Trivy for vulnerability scanning
+
 ## Getting started
 
 ### Prerequisites
@@ -22,9 +32,16 @@ or
 
 ### Running the app
 
+#### With Docker
 ```bash
 docker-compose up
 ```
+
+#### Without Docker
+```bash
+make run
+```
+See [Makefile](Makefile) for more details.
 
 ## CI/CD
 
@@ -32,8 +49,10 @@ The CI/CD is done using Jenkins.
 
 See [Jenkinsfile](Jenkinsfile) for more details.
 
-## TODO
+## Progress of the project
 
-- [ ] Add tests
+- [x] All endpoints
+- [x] Pass all postman tests
+- [ ] Add unit tests
 - [ ] Add monitoring
 - [ ] Add cache
