@@ -286,7 +286,25 @@ func (h *Handler) CreateArticle(w http.ResponseWriter, r *http.Request) {
 
 	// Request validation
 	if req.Article.Title == "" || req.Article.Description == "" || req.Article.Body == "" {
-		h.clientError(w, http.StatusBadRequest)
+		res := map[string]interface{}{
+			"errors": map[string][]string{},
+		}
+		if req.Article.Title == "" {
+			res["errors"].(map[string][]string)["title"] = []string{"can't be empty"}
+		}
+		if req.Article.Description == "" {
+			res["errors"].(map[string][]string)["description"] = []string{"can't be empty"}
+		}
+		if req.Article.Body == "" {
+			res["errors"].(map[string][]string)["body"] = []string{"can't be empty"}
+		}
+		resJson, err := json.Marshal(res)
+		if err != nil {
+			h.serverError(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, string(resJson), http.StatusUnprocessableEntity)
 		return
 	}
 
