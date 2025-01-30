@@ -3,6 +3,11 @@
 This is an implementation of the [RealWorld](https://realworld-docs.netlify.app) backend built with Go and chi.
 RealWorld is a clone of [Medium](https://medium.com) built with a purpose to learn and understand how to build a real world application.
 
+Backend Demo: [https://realworld.ddpaud.my.id/api](https://realworld.ddpaud.my.id/api)
+
+Demo with frontend: [https://realworld.ddpaud.my.id](https://realworld.ddpaud.my.id) (Frontend is not mine)
+(Credit to [https://github.com/mutoe/vue3-realworld-example-app](https://github.com/mutoe/vue3-realworld-example-app)
+
 ## Features
 
 - Authentication using JWT
