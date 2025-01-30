@@ -54,6 +54,10 @@ The CI/CD is done using Jenkins.
 
 See [Jenkinsfile](Jenkinsfile) for more details.
 
+## API Documentation
+
+See [https://realworld-docs.netlify.app/specifications/backend/endpoints/](https://realworld-docs.netlify.app/specifications/backend/endpoints/) for the API documentation.
+
 ## Progress of the project
 
 - [x] All endpoints
