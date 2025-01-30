@@ -469,7 +469,7 @@ func (h *Handler) UpdateArticle(w http.ResponseWriter, r *http.Request) {
 			h.serverError(w, err)
 			return
 		}
-		slug = fmt.Sprintf("%s-%s%5d", slug, time.Now().Format("20060102150405"), random)
+		newSlug = fmt.Sprintf("%s-%s%5d", newSlug, time.Now().Format("20060102150405"), random)
 	}
 
 	_, claims, err := jwtauth.FromContext(r.Context())
