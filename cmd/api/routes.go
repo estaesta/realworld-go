@@ -36,7 +36,7 @@ func (app *application) loadRoutes() {
 
 	r.Use(cors.Handler(cors.Options{
 		// AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
-		AllowedOrigins: []string{"https://realworld.ddpaud.my.id/*", "https://estaesta.github.io/*"},
+		AllowedOrigins: []string{"https://realworld.ddpaud.my.id*", "https://estaesta.github.io*"},
 		// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
