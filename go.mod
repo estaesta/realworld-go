@@ -5,6 +5,7 @@ go 1.23.2
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/go-chi/chi/v5 v5.2.0 // indirect
+	github.com/go-chi/cors v1.2.1 // indirect
 	github.com/go-chi/jwtauth/v5 v5.3.2 // indirect
 	github.com/goccy/go-json v0.10.4 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.2 // indirect
