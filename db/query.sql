@@ -187,7 +187,8 @@ SELECT sqlc.embed(comment),
 FROM comment 
 JOIN user ON comment.author_id = user.id
 LEFT JOIN following ON comment.author_id = following.user_id AND following.follower_id = sqlc.arg('user_id')
-WHERE article_id = (SELECT id FROM article WHERE slug = sqlc.arg('slug'));
+WHERE article_id = (SELECT id FROM article WHERE slug = sqlc.arg('slug'))
+ORDER BY comment.created_at DESC;
 
 -- name: DeleteCommentByIDAndSlug :execrows
 DELETE FROM comment 

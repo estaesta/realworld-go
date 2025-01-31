@@ -514,6 +514,7 @@ FROM comment
 JOIN user ON comment.author_id = user.id
 LEFT JOIN following ON comment.author_id = following.user_id AND following.follower_id = ?1
 WHERE article_id = (SELECT id FROM article WHERE slug = ?2)
+ORDER BY comment.created_at DESC
 `
 
 type GetCommentsParams struct {
