@@ -128,6 +128,7 @@ WHERE (user.username = sqlc.arg(author) or sqlc.arg(author) = '')
         ) OR sqlc.arg(tag) = '')
     AND (favorite.user_id = sqlc.arg(favorited) or sqlc.arg(favorited) = 0)
 GROUP BY article.id
+ORDER BY article.created_at DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
 -- name: GetArticlesFeed :many
@@ -156,6 +157,7 @@ LEFT JOIN tag ON article_tag.tag_id = tag.id
 LEFT JOIN favorite ON article.id = favorite.article_id
 JOIN following ON article.author_id = following.user_id AND following.follower_id = sqlc.arg('user_id')
 GROUP BY article.id
+ORDER BY article.created_at DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
 -- name: UpdateArticle :one
