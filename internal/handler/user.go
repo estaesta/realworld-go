@@ -65,7 +65,7 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := int64(claim["user_id"].(float64))
-	token := r.Header.Get("Authorization")[7:]
+	token := r.Header.Get("Authorization")[6:]
 
 	param := model.UpdateUserByIDParams{ID: id}
 	if req.User.Email != nil {
